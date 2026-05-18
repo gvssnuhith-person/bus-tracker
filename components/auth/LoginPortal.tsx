@@ -70,14 +70,14 @@ export default function LoginPortal() {
   ]
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between overflow-x-hidden font-sans relative">
+    <div className="min-h-screen bg-black text-slate-100 flex flex-col justify-between overflow-x-hidden font-sans relative">
       
       {/* Background neon glows */}
       <div className="absolute top-10 left-10 w-72 h-72 rounded-full bg-cyan-500/10 blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-purple-500/10 blur-[150px] pointer-events-none"></div>
 
       {/* Header bar */}
-      <header className="w-full px-6 py-4 flex justify-between items-center z-10 border-b border-white/5 bg-slate-950/40 backdrop-blur-md">
+      <header className="w-full px-6 py-4 flex justify-between items-center z-10 border-b border-white/5 bg-black/40 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center shadow-lg shadow-cyan-500/10">
             <span className="text-lg font-bold text-white">C</span>
@@ -267,7 +267,7 @@ export default function LoginPortal() {
                   </div>
 
                   {/* Auth Switch Tabs (Email vs Mobile OTP) */}
-                  <div className="flex gap-2 p-1 bg-slate-950 rounded-xl border border-white/5 shrink-0">
+                  <div className="flex gap-2 p-1 bg-black rounded-xl border border-white/5 shrink-0">
                     <button
                       type="button"
                       onClick={() => setAuthMethod("email")}
@@ -454,7 +454,7 @@ export default function LoginPortal() {
       </main>
 
       {/* Footer covers */}
-      <footer className="w-full px-6 py-3 border-t border-white/5 bg-slate-950/40 text-center z-10 shrink-0">
+      <footer className="w-full px-6 py-3 border-t border-white/5 bg-black/40 text-center z-10 shrink-0">
         <p className="text-[8px] font-bold text-slate-600 tracking-widest uppercase">
           CampusFlow AI Transit Ecosystem © 2026 • Firebase + Next.js Production Suite
         </p>

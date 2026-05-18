@@ -78,7 +78,7 @@ export default function Home() {
     <main className={`relative min-h-screen w-full overflow-hidden flex flex-col p-4 gap-4 antialiased transition-all duration-300 ${
       theme === "light" 
         ? "bg-slate-50 text-slate-900" 
-        : "bg-slate-950 text-slate-100"
+        : "bg-black text-slate-100"
     }`}>
       
       {/* Global CSS particle layer (only for Dark mode) */}

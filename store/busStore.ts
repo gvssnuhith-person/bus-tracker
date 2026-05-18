@@ -149,8 +149,13 @@ interface BusState {
   // Admin CRUD Settings
   addBus: (bus: Bus) => void
   removeBus: (busId: string) => void
+  updateBus: (busId: string, updated: Partial<Bus>) => void
   addRoute: (route: Route) => void
   removeRoute: (routeId: string) => void
+  updateRoute: (routeId: string, updated: Partial<Route>) => void
+  updateCampus: (id: string, updated: Partial<Campus>) => void
+  removeAttendanceLog: (id: string) => void
+  updateAttendanceLog: (id: string, updated: Partial<StudentAttendance>) => void
 }
 
 export const useBusStore = create<BusState>((set) => ({
@@ -502,6 +507,9 @@ export const useBusStore = create<BusState>((set) => ({
 
   addBus: (bus) => set((state) => ({ buses: [...state.buses, bus] })),
   removeBus: (busId) => set((state) => ({ buses: state.buses.filter((b) => b.busId !== busId) })),
+  updateBus: (busId, updated) => set((state) => ({
+    buses: state.buses.map((b) => b.busId === busId ? { ...b, ...updated } : b)
+  })),
   addRoute: (route) => set((state) => ({ routes: [...state.routes, route] })),
   removeRoute: (routeId) => set((state) => {
     const remainingRoutes = state.routes.filter((r) => r.id !== routeId)
@@ -528,4 +536,16 @@ export const useBusStore = create<BusState>((set) => ({
       buses: updatedBuses,
     }
   }),
+  updateRoute: (routeId, updated) => set((state) => ({
+    routes: state.routes.map((r) => r.id === routeId ? { ...r, ...updated } : r)
+  })),
+  updateCampus: (id, updated) => set((state) => ({
+    campuses: state.campuses.map((c) => c.id === id ? { ...c, ...updated } : c)
+  })),
+  removeAttendanceLog: (id) => set((state) => ({
+    attendanceLogs: state.attendanceLogs.filter((l) => l.id !== id)
+  })),
+  updateAttendanceLog: (id, updated) => set((state) => ({
+    attendanceLogs: state.attendanceLogs.map((l) => l.id === id ? { ...l, ...updated } : l)
+  })),
 }))
