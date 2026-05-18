@@ -99,9 +99,49 @@ interface BusState {
   setHeatmapEnabled: (enabled: boolean) => void
   driverCompletedStops: string[]
   toggleDriverStop: (stopName: string) => void
+
+  // Admin CRUD Settings
+  campusName: string
+  setCampusName: (name: string) => void
+  addBus: (bus: Bus) => void
+  removeBus: (busId: string) => void
+  addRoute: (route: Route) => void
+  removeRoute: (routeId: string) => void
 }
 
 export const useBusStore = create<BusState>((set) => ({
+  // Dynamic Campus Settings
+  campusName: "CampusFlow AI",
+  setCampusName: (name) => set({ campusName: name }),
+  addBus: (bus) => set((state) => ({ buses: [...state.buses, bus] })),
+  removeBus: (busId) => set((state) => ({ buses: state.buses.filter((b) => b.busId !== busId) })),
+  addRoute: (route) => set((state) => ({ routes: [...state.routes, route] })),
+  removeRoute: (routeId) => set((state) => {
+    const remainingRoutes = state.routes.filter((r) => r.id !== routeId)
+    const firstRoute = remainingRoutes[0]
+    
+    // Automatically reassign buses on the deleted route to the first available remaining route
+    const updatedBuses = state.buses.map((bus) => {
+      if (bus.routeId === routeId && firstRoute) {
+        return {
+          ...bus,
+          routeId: firstRoute.id,
+          route: `${firstRoute.name} (Line ${firstRoute.name.charAt(0)})`,
+          lat: firstRoute.path[0][0],
+          lng: firstRoute.path[0][1],
+          currentPathIndex: 0,
+          nextStop: firstRoute.stops[0]?.name || "Terminal",
+        }
+      }
+      return bus
+    }).filter((bus) => bus.routeId !== routeId || firstRoute)
+
+    return {
+      routes: remainingRoutes,
+      buses: updatedBuses,
+    }
+  }),
+
   // Authentication & Default Roles
   activeRole: "admin",
   setActiveRole: (role) => set({ activeRole: role }),

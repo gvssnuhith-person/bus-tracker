@@ -12,6 +12,7 @@ export default function RoleConsole() {
     setHeatmapEnabled,
     sosTriggered,
     setSosTriggered,
+    campusName,
   } = useBusStore()
 
   const roles: { id: UserRole; label: string; desc: string; icon: string }[] = [
@@ -31,7 +32,7 @@ export default function RoleConsole() {
         </div>
         <div>
           <h1 className="text-sm font-black tracking-widest bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent uppercase">
-            CampusFlow AI
+            {campusName}
           </h1>
           <p className="text-[10px] font-bold text-slate-500 tracking-wider">
             Smart Transit Ecosystem
