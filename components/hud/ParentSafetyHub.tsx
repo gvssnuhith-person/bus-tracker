@@ -66,7 +66,7 @@ export default function ParentSafetyHub() {
               </div>
             </div>
             <span className="text-[9px] font-black text-cyan-400 uppercase bg-cyan-500/10 px-2 py-0.5 rounded-lg">
-              SAFE (<55 km/h)
+              SAFE (&lt;55 km/h)
             </span>
           </div>
 
