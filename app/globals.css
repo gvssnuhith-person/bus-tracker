@@ -123,3 +123,35 @@ body {
 .map-stop-pulse {
   animation: mapPulse 2.5s ease-in-out infinite;
 }
+
+/* Hide scrollbars for modular grid scroll wrappers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Voice alert pulsator keyframes */
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+/* Neon SOS distress shadow helper */
+.shadow-neon-rose {
+  box-shadow: 0 0 25px rgba(244, 63, 94, 0.5);
+}
+

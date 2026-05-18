@@ -2,6 +2,20 @@ import { useBusStore, Bus } from "@/store/busStore"
 
 let simIntervalId: NodeJS.Timeout | null = null
 
+// Helper to trigger browser speech synthesis vocal announcements
+function speakAnnouncement(text: string) {
+  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    const { voiceEnabled } = useBusStore.getState()
+    if (!voiceEnabled) return
+
+    window.speechSynthesis.cancel() // Stop any current speech
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.rate = 1.0
+    utterance.pitch = 1.0
+    window.speechSynthesis.speak(utterance)
+  }
+}
+
 // Calculate bearing angle (heading) between two GPS points
 function calculateBearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const dLng = (lng2 - lng1) * (Math.PI / 180)
@@ -30,7 +44,7 @@ export function startSimulation() {
         const path = route.path
         const pathLen = path.length
 
-        // Step speed multiplier
+        // Step index increment
         let nextIndex = bus.currentPathIndex + 1 * simSpeed
         let didWrap = false
 
@@ -51,12 +65,14 @@ export function startSimulation() {
         let speed = bus.speed
         let passengers = bus.passengers
         let status = bus.status
-        let fuelLevel = Math.max(0, bus.fuelLevel - 0.1 * simSpeed)
+        let fuelLevel = Math.max(0, bus.fuelLevel - 0.12 * simSpeed)
 
         // Refuel trigger
         if (fuelLevel <= 10) {
           fuelLevel = 100
-          addNotification(`${bus.busId} has completed automated refuelling.`, "success", bus.busId)
+          const msg = `${bus.busId} has completed automated refuelling.`
+          addNotification(msg, "success", bus.busId)
+          speakAnnouncement(msg)
         }
 
         // Find nearest upcoming stop on path
@@ -78,11 +94,9 @@ export function startSimulation() {
             const modifier = Math.floor(Math.random() * 9) - 4 // -4 to +4
             passengers = Math.min(bus.capacity, Math.max(5, bus.passengers + modifier))
             
-            addNotification(
-              `${bus.busId} has arrived at ${currentTargetStop.name}. Boarding in progress.`,
-              "info",
-              bus.busId
-            )
+            const msg = `${bus.busId} has arrived at ${currentTargetStop.name}. Boarding in progress.`
+            addNotification(msg, "info", bus.busId)
+            speakAnnouncement(`${bus.busId} at ${currentTargetStop.name}`)
             
             // Randomly trigger congestion alerts near stations
             if (Math.random() < 0.15) {
@@ -105,6 +119,13 @@ export function startSimulation() {
             } else {
               speed = Math.max(20, baseSpeed + noise)
             }
+
+            // AI Safety Monitoring: Overspeed Detection (Trigger if > 55km/h on non-ring roads)
+            if (speed > 55 && bus.routeId !== "route-orr" && Math.random() < 0.2) {
+              const msg = `AI Safety Alert: Overspeed incident detected on ${bus.busId} (${speed} km/h).`
+              addNotification(msg, "error", bus.busId)
+              speakAnnouncement(`Warning: ${bus.busId} overspeed`)
+            }
           }
 
           // Calculate visual dynamic ETA based on indexes remaining
@@ -112,14 +133,12 @@ export function startSimulation() {
           etaMinutes = Math.max(1, Math.ceil(remainingIndices / (2 / simSpeed)))
         }
 
-        // Random engine alert simulation
-        if (Math.random() < 0.015) {
+        // AI Safety Monitoring: Route Deviation Alert (1% chance)
+        if (Math.random() < 0.008) {
           status = "delayed"
-          addNotification(
-            `Sensors detect active speed delay for ${bus.busId}. Re-routing analysis starting.`,
-            "error",
-            bus.busId
-          )
+          const msg = `AI Security Alert: Unauthorized route deviation warning triggered for ${bus.busId}.`
+          addNotification(msg, "error", bus.busId)
+          speakAnnouncement(`Deviation alert: ${bus.busId}`)
         }
 
         return {

@@ -1,25 +1,39 @@
 import { create } from "zustand"
 
+export type UserRole = "admin" | "student" | "parent" | "driver"
+
+export interface DriverInfo {
+  name: string
+  avatar: string
+  rating: number
+  phone: string
+}
+
+export interface StudentAttendance {
+  id: string
+  studentName: string
+  rollNumber: string
+  busId: string
+  stopName: string
+  timestamp: string
+  type: "RFID Tap" | "QR Scan" | "NFC Detect"
+}
+
 export interface Bus {
   busId: string
-  route: string
   routeId: string
+  route: string
   lat: number
   lng: number
-  speed: number
   heading: number
-  passengers: number
+  speed: number
   capacity: number
+  passengers: number
   fuelLevel: number
-  status: "on-time" | "delayed" | "heavy-traffic"
+  status: "on-time" | "heavy-traffic" | "delayed"
   nextStop: string
-  driver: {
-    name: string
-    avatar: string
-    phone: string
-    rating: number
-  }
   etaMinutes: number
+  driver: DriverInfo
   currentPathIndex: number
 }
 
@@ -34,243 +48,315 @@ export interface Route {
   name: string
   color: string
   stops: RouteStop[]
-  path: [number, number][] // Interpolated road path coordinates
+  path: [number, number][]
 }
 
 export interface NotificationLog {
   id: string
   message: string
-  severity: "info" | "warning" | "error" | "success"
+  severity: "info" | "success" | "warning" | "error"
   timestamp: string
   busId?: string
 }
 
 interface BusState {
+  // Authentication & Roles
+  activeRole: UserRole
+  setActiveRole: (role: UserRole) => void
+
+  // Telemetry Lists
   buses: Bus[]
   routes: Route[]
   selectedBusId: string | null
-  searchQuery: string
-  selectedRouteFilter: string
-  isSimulating: boolean
-  simSpeed: 1 | 2 | 5
-  notifications: NotificationLog[]
-  
-  // Actions
   setSelectedBusId: (id: string | null) => void
+
+  // Filters
+  searchQuery: string
   setSearchQuery: (query: string) => void
-  setSelectedRouteFilter: (route: string) => void
-  toggleSimulation: () => void
-  setSimSpeed: (speed: 1 | 2 | 5) => void
-  updateBusPositions: (updater: (prevBuses: Bus[]) => Bus[]) => void
-  addNotification: (message: string, severity: NotificationLog["severity"], busId?: string) => void
+  selectedRouteFilter: string
+  setSelectedRouteFilter: (routeId: string) => void
+
+  // Real-Time Simulator Variables
+  isSimulating: boolean
+  setSimulating: (sim: boolean) => void
+  simSpeed: number
+  setSimSpeed: (speed: number) => void
+  updateBusPositions: (updater: (prev: Bus[]) => Bus[]) => void
+
+  // Notification Engine
+  notifications: NotificationLog[]
+  addNotification: (message: string, severity?: "info" | "success" | "warning" | "error", busId?: string) => void
   clearNotifications: () => void
+
+  // Smart Campus Features
+  attendanceLogs: StudentAttendance[]
+  addAttendanceLog: (log: Omit<StudentAttendance, "id" | "timestamp">) => void
+  sosTriggered: boolean
+  setSosTriggered: (triggered: boolean) => void
+  voiceEnabled: boolean
+  setVoiceEnabled: (enabled: boolean) => void
+  heatmapEnabled: boolean
+  setHeatmapEnabled: (enabled: boolean) => void
+  driverCompletedStops: string[]
+  toggleDriverStop: (stopName: string) => void
 }
-
-// Helper to interpolate between two GPS points
-function interpolatePath(points: [number, number][], stepsPerSegment: number = 30): [number, number][] {
-  const path: [number, number][] = []
-  for (let i = 0; i < points.length - 1; i++) {
-    const start = points[i]
-    const end = points[i + 1]
-    for (let step = 0; step < stepsPerSegment; step++) {
-      const ratio = step / stepsPerSegment
-      const lat = start[0] + (end[0] - start[0]) * ratio
-      const lng = start[1] + (end[1] - start[1]) * ratio
-      path.push([lat, lng])
-    }
-  }
-  path.push(points[points.length - 1])
-  return path
-}
-
-// Real Hyderabad Geographic Coordinates for Route Stops
-const HYD_ROUTES: Route[] = [
-  {
-    id: "route-hitech",
-    name: "Hitech City Express",
-    color: "#00f0ff", // Cyan
-    stops: [
-      { name: "Gachibowli DLF", lat: 17.4475, lng: 78.3615 },
-      { name: "Hitech City Hub", lat: 17.4483, lng: 78.3804 },
-      { name: "Jubilee Hills Checkpost", lat: 17.4265, lng: 78.4116 },
-      { name: "Begumpet Station", lat: 17.4394, lng: 78.4611 },
-      { name: "Secunderabad Junction", lat: 17.4334, lng: 78.5015 }
-    ],
-    path: interpolatePath([
-      [17.4475, 78.3615],
-      [17.4495, 78.3705],
-      [17.4483, 78.3804],
-      [17.4365, 78.3955],
-      [17.4265, 78.4116],
-      [17.4255, 78.4350],
-      [17.4394, 78.4611],
-      [17.4422, 78.4820],
-      [17.4334, 78.5015]
-    ])
-  },
-  {
-    id: "route-charminar",
-    name: "Charminar Heritage Line",
-    color: "#bd34fe", // Purple
-    stops: [
-      { name: "Charminar Palace", lat: 17.3616, lng: 78.4747 },
-      { name: "Koti Center", lat: 17.3828, lng: 78.4842 },
-      { name: "Nampally Metro", lat: 17.3872, lng: 78.4682 },
-      { name: "Lakdikapul", lat: 17.4022, lng: 78.4612 },
-      { name: "Ameerpet Station", lat: 17.4360, lng: 78.4439 }
-    ],
-    path: interpolatePath([
-      [17.3616, 78.4747],
-      [17.3712, 78.4795],
-      [17.3828, 78.4842],
-      [17.3852, 78.4760],
-      [17.3872, 78.4682],
-      [17.3942, 78.4645],
-      [17.4022, 78.4612],
-      [17.4190, 78.4520],
-      [17.4360, 78.4439]
-    ])
-  },
-  {
-    id: "route-orr",
-    name: "Outer Ring Commuter",
-    color: "#10b981", // Emerald Green
-    stops: [
-      { name: "Gachibowli Circle", lat: 17.4192, lng: 78.3489 },
-      { name: "Miyapur Metro", lat: 17.4948, lng: 78.3534 },
-      { name: "Kukatpally Junction", lat: 17.4841, lng: 78.3974 },
-      { name: "Secunderabad Metro", lat: 17.4385, lng: 78.4988 }
-    ],
-    path: interpolatePath([
-      [17.4192, 78.3489],
-      [17.4410, 78.3395],
-      [17.4685, 78.3412],
-      [17.4948, 78.3534],
-      [17.4912, 78.3755],
-      [17.4841, 78.3974],
-      [17.4615, 78.4350],
-      [17.4490, 78.4680],
-      [17.4385, 78.4988]
-    ])
-  }
-]
-
-// Predefined Fleet list on launch
-const INITIAL_BUSES: Bus[] = [
-  {
-    busId: "BUS-104",
-    route: "Hitech City Express",
-    routeId: "route-hitech",
-    lat: 17.4475,
-    lng: 78.3615,
-    speed: 45,
-    heading: 45,
-    passengers: 34,
-    capacity: 60,
-    fuelLevel: 82,
-    status: "on-time",
-    nextStop: "Hitech City Hub",
-    driver: {
-      name: "Ramesh Kumar",
-      avatar: "👨‍✈️",
-      phone: "+91 98480 22338",
-      rating: 4.8
-    },
-    etaMinutes: 4,
-    currentPathIndex: 0
-  },
-  {
-    busId: "BUS-202",
-    route: "Charminar Heritage Line",
-    routeId: "route-charminar",
-    lat: 17.3616,
-    lng: 78.4747,
-    speed: 28,
-    heading: 90,
-    passengers: 52,
-    capacity: 55,
-    fuelLevel: 64,
-    status: "heavy-traffic",
-    nextStop: "Koti Center",
-    driver: {
-      name: "Mohammad Ali",
-      avatar: "🧔",
-      phone: "+91 94401 55667",
-      rating: 4.9
-    },
-    etaMinutes: 12,
-    currentPathIndex: 0
-  },
-  {
-    busId: "BUS-500",
-    route: "Outer Ring Commuter",
-    routeId: "route-orr",
-    lat: 17.4192,
-    lng: 78.3489,
-    speed: 65,
-    heading: 320,
-    passengers: 21,
-    capacity: 70,
-    fuelLevel: 94,
-    status: "on-time",
-    nextStop: "Miyapur Metro",
-    driver: {
-      name: "K. Srinivasan",
-      avatar: "👴",
-      phone: "+91 99890 11224",
-      rating: 4.7
-    },
-    etaMinutes: 8,
-    currentPathIndex: 0
-  }
-]
-
-const INITIAL_NOTIFICATIONS: NotificationLog[] = [
-  {
-    id: "notif-1",
-    message: "Hitech City Express fleet initialized successfully.",
-    severity: "success",
-    timestamp: new Date(Date.now() - 300000).toLocaleTimeString()
-  },
-  {
-    id: "notif-2",
-    message: "BUS-202 experiencing slow speeds on Hyderabad heritage stretch.",
-    severity: "warning",
-    timestamp: new Date(Date.now() - 120000).toLocaleTimeString(),
-    busId: "BUS-202"
-  }
-]
 
 export const useBusStore = create<BusState>((set) => ({
-  buses: INITIAL_BUSES,
-  routes: HYD_ROUTES,
-  selectedBusId: "BUS-104", // Select the first bus on start
+  // Authentication & Default Roles
+  activeRole: "admin",
+  setActiveRole: (role) => set({ activeRole: role }),
+
+  selectedBusId: "BUS-104",
   searchQuery: "",
   selectedRouteFilter: "all",
+
   isSimulating: true,
   simSpeed: 1,
-  notifications: INITIAL_NOTIFICATIONS,
+
+  // Smart Safety Settings
+  sosTriggered: false,
+  setSosTriggered: (triggered) => set({ sosTriggered: triggered }),
+  voiceEnabled: false,
+  setVoiceEnabled: (enabled) => set({ voiceEnabled: enabled }),
+  heatmapEnabled: false,
+  setHeatmapEnabled: (enabled) => set({ heatmapEnabled: enabled }),
+  driverCompletedStops: [],
+  toggleDriverStop: (stopName) =>
+    set((state) => ({
+      driverCompletedStops: state.driverCompletedStops.includes(stopName)
+        ? state.driverCompletedStops.filter((s) => s !== stopName)
+        : [...state.driverCompletedStops, stopName],
+    })),
+
+  // Demo Students Attendance NFC/RFID Log
+  attendanceLogs: [
+    {
+      id: "log-1",
+      studentName: "Aditya Verma",
+      rollNumber: "IIT2023042",
+      busId: "BUS-104",
+      stopName: "Gachibowli DLF",
+      timestamp: "11:15 AM",
+      type: "RFID Tap",
+    },
+    {
+      id: "log-2",
+      studentName: "Sneha Reddy",
+      rollNumber: "IIT2023118",
+      busId: "BUS-202",
+      stopName: "Lakdikapul",
+      timestamp: "11:19 AM",
+      type: "NFC Detect",
+    },
+  ],
+  addAttendanceLog: (log) =>
+    set((state) => {
+      const now = new Date()
+      const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      const newLog: StudentAttendance = {
+        ...log,
+        id: `log-${Date.now()}`,
+        timestamp: timeStr,
+      }
+      return { attendanceLogs: [newLog, ...state.attendanceLogs].slice(0, 50) }
+    }),
+
+  // Demo Buses Setup (5 buses for massive hacker/presentation visual impact)
+  buses: [
+    {
+      busId: "BUS-104",
+      routeId: "route-hitech",
+      route: "Hitech City Express (Line H)",
+      lat: 17.4483,
+      lng: 78.3741,
+      heading: 90,
+      speed: 45,
+      capacity: 60,
+      passengers: 34,
+      fuelLevel: 82,
+      status: "on-time",
+      nextStop: "Gachibowli DLF",
+      etaMinutes: 2,
+      driver: { name: "Ramesh Kumar", avatar: "👨‍✈️", rating: 4.8, phone: "+91 98480 22338" },
+      currentPathIndex: 0,
+    },
+    {
+      busId: "BUS-202",
+      routeId: "route-charminar",
+      route: "Charminar Heritage (Line C)",
+      lat: 17.3616,
+      lng: 78.4747,
+      heading: 180,
+      speed: 12,
+      capacity: 55,
+      passengers: 52,
+      fuelLevel: 94,
+      status: "heavy-traffic",
+      nextStop: "Charminar Palace",
+      etaMinutes: 4,
+      driver: { name: "Suresh Yadav", avatar: "👨‍✈️", rating: 4.6, phone: "+91 91770 44551" },
+      currentPathIndex: 0,
+    },
+    {
+      busId: "BUS-500",
+      routeId: "route-orr",
+      route: "Outer Ring Commuter (Line O)",
+      lat: 17.4241,
+      lng: 78.3430,
+      heading: 270,
+      speed: 68,
+      capacity: 70,
+      passengers: 21,
+      fuelLevel: 68,
+      status: "on-time",
+      nextStop: "Gachibowli Circle",
+      etaMinutes: 5,
+      driver: { name: "Baldev Singh", avatar: "👨‍✈️", rating: 4.9, phone: "+91 99882 11002" },
+      currentPathIndex: 0,
+    },
+    {
+      busId: "BUS-112",
+      routeId: "route-hitech",
+      route: "Hitech City Express (Line H)",
+      lat: 17.4374,
+      lng: 78.4116,
+      heading: 45,
+      speed: 40,
+      capacity: 60,
+      passengers: 12,
+      fuelLevel: 42,
+      status: "on-time",
+      nextStop: "Jubilee Hills Checkpost",
+      etaMinutes: 8,
+      driver: { name: "M. A. Rahman", avatar: "👨‍✈️", rating: 4.7, phone: "+91 94405 88992" },
+      currentPathIndex: 12,
+    },
+    {
+      busId: "BUS-305",
+      routeId: "route-charminar",
+      route: "Charminar Heritage (Line C)",
+      lat: 17.3820,
+      lng: 78.4520,
+      heading: 0,
+      speed: 0,
+      capacity: 55,
+      passengers: 41,
+      fuelLevel: 15,
+      status: "delayed",
+      nextStop: "Lakdikapul",
+      etaMinutes: 12,
+      driver: { name: "Koteswar Rao", avatar: "👨‍✈️", rating: 4.5, phone: "+91 96112 33445" },
+      currentPathIndex: 5,
+    },
+  ],
+
+  // Hyderabad landmark Routes & complete smooth Snap Road paths
+  routes: [
+    {
+      id: "route-hitech",
+      name: "Hitech City Express",
+      color: "#00f0ff",
+      stops: [
+        { name: "Gachibowli DLF", lat: 17.4430, lng: 78.3570 },
+        { name: "Hitech City Hub", lat: 17.4483, lng: 78.3741 },
+        { name: "Jubilee Hills Checkpost", lat: 17.4348, lng: 78.4115 },
+        { name: "Begumpet Station", lat: 17.4374, lng: 78.4482 },
+        { name: "Secunderabad Junction", lat: 17.4338, lng: 78.5016 },
+      ],
+      path: [
+        [17.4430, 78.3570],
+        [17.4445, 78.3620],
+        [17.4460, 78.3680],
+        [17.4483, 78.3741],
+        [17.4440, 78.3840],
+        [17.4380, 78.3970],
+        [17.4348, 78.4115],
+        [17.4360, 78.4250],
+        [17.4374, 78.4482],
+        [17.4350, 78.4750],
+        [17.4338, 78.5016],
+      ],
+    },
+    {
+      id: "route-charminar",
+      name: "Charminar Heritage Line",
+      color: "#bd34fe",
+      stops: [
+        { name: "Charminar Palace", lat: 17.3616, lng: 78.4747 },
+        { name: "Koti Center", lat: 17.3820, lng: 78.4850 },
+        { name: "Nampally Metro", lat: 17.3888, lng: 78.4680 },
+        { name: "Lakdikapul", lat: 17.4010, lng: 78.4600 },
+        { name: "Ameerpet Station", lat: 17.4374, lng: 78.4482 },
+      ],
+      path: [
+        [17.3616, 78.4747],
+        [17.3710, 78.4790],
+        [17.3820, 78.4850],
+        [17.3850, 78.4760],
+        [17.3888, 78.4680],
+        [17.3950, 78.4640],
+        [17.4010, 78.4600],
+        [17.4150, 78.4550],
+        [17.4280, 78.4510],
+        [17.4374, 78.4482],
+      ],
+    },
+    {
+      id: "route-orr",
+      name: "Outer Ring Commuter",
+      color: "#10b981",
+      stops: [
+        { name: "Gachibowli Circle", lat: 17.4241, lng: 78.3430 },
+        { name: "Miyapur Metro", lat: 17.4968, lng: 78.3580 },
+        { name: "Kukatpally Junction", lat: 17.4840, lng: 78.3980 },
+        { name: "Secunderabad Metro", lat: 17.4338, lng: 78.5016 },
+      ],
+      path: [
+        [17.4241, 78.3430],
+        [17.4520, 78.3410],
+        [17.4750, 78.3450],
+        [17.4968, 78.3580],
+        [17.4910, 78.3750],
+        [17.4840, 78.3980],
+        [17.4620, 78.4350],
+        [17.4420, 78.4720],
+        [17.4338, 78.5016],
+      ],
+    },
+  ],
 
   setSelectedBusId: (id) => set({ selectedBusId: id }),
   setSearchQuery: (query) => set({ searchQuery: query }),
-  setSelectedRouteFilter: (route) => set({ selectedRouteFilter: route }),
-  toggleSimulation: () => set((state) => ({ isSimulating: !state.isSimulating })),
+  setSelectedRouteFilter: (routeId) => set({ selectedRouteFilter: routeId }),
+  setSimulating: (sim) => set({ isSimulating: sim }),
   setSimSpeed: (speed) => set({ simSpeed: speed }),
-  
-  updateBusPositions: (updater) => set((state) => ({ buses: updater(state.buses) })),
-  
-  addNotification: (message, severity, busId) => set((state) => {
-    const newNotif: NotificationLog = {
-      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      message,
-      severity,
-      timestamp: new Date().toLocaleTimeString(),
-      busId
-    }
-    return {
-      notifications: [newNotif, ...state.notifications].slice(0, 30) // Cap at 30 notifications
-    }
-  }),
-  
-  clearNotifications: () => set({ notifications: [] })
+
+  updateBusPositions: (updater) =>
+    set((state) => ({ buses: updater(state.buses) })),
+
+  // Notifications Stack
+  notifications: [
+    {
+      id: "1",
+      message: "Security status operational. Campus telematics online.",
+      severity: "success",
+      timestamp: "11:20 AM",
+    },
+  ],
+
+  addNotification: (message, severity = "info", busId) =>
+    set((state) => {
+      const now = new Date()
+      const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      const newNotif: NotificationLog = {
+        id: `notif-${Date.now()}`,
+        message,
+        severity,
+        timestamp: timeStr,
+        busId,
+      }
+      return { notifications: [newNotif, ...state.notifications].slice(0, 100) }
+    }),
+
+  clearNotifications: () => set({ notifications: [] }),
 }))

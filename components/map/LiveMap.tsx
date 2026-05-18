@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from "react-leaflet"
+import { MapContainer, TileLayer, Polyline, Marker, Popup, Circle, useMap } from "react-leaflet"
 import { useBusStore, Bus } from "@/store/busStore"
 import L from "leaflet"
 
@@ -16,10 +16,10 @@ function MapController({ selectedBus }: { selectedBus: Bus | null }) {
       lastSelectedId.current = selectedBus.busId
 
       if (isNewSelection) {
-        // Instant zoom on first selection
+        // Zoom and center on selection
         map.setView([selectedBus.lat, selectedBus.lng], 14, { animate: true, duration: 1 })
       } else {
-        // Smooth pan follow as the bus moves
+        // Follow movement
         map.panTo([selectedBus.lat, selectedBus.lng], { animate: true, duration: 0.8 })
       }
     }
@@ -28,25 +28,25 @@ function MapController({ selectedBus }: { selectedBus: Bus | null }) {
   return null
 }
 
-// Function to generate premium glowing custom HTML marker for each active bus
+// Custom HTML glowing marker for active buses
 function createBusMarkerIcon(bus: Bus, color: string, isSelected: boolean) {
   return L.divIcon({
     className: "custom-bus-marker-wrapper",
     html: `
       <div class="relative flex items-center justify-center w-9 h-9 transition-all duration-300">
-        <!-- Outer Glowing Ring -->
+        <!-- Glowing Ring -->
         <div class="absolute inset-0 rounded-full bg-slate-950/90 border-2 transition-all duration-300 ${
           isSelected ? "scale-110 shadow-lg border-cyan-400" : "border-slate-800"
         }" style="box-shadow: ${isSelected ? `0 0 15px ${color}` : "none"}"></div>
         
-        <!-- Rotating Navigation Arrow -->
+        <!-- Rotating SVG Arrow -->
         <div class="z-10 flex items-center justify-center w-6 h-6 transition-transform duration-300" style="transform: rotate(${bus.heading}deg)">
           <svg viewBox="0 0 24 24" class="w-4 h-4" fill="${color}">
             <path d="M12 2L2 22l10-6 10 6L12 2z" />
           </svg>
         </div>
 
-        <!-- Pulse effect for selected bus -->
+        <!-- Ping Pulse -->
         ${
           isSelected
             ? `<div class="absolute -inset-1.5 rounded-full border border-cyan-400/30 animate-ping pointer-events-none"></div>`
@@ -59,14 +59,14 @@ function createBusMarkerIcon(bus: Bus, color: string, isSelected: boolean) {
   })
 }
 
-// Custom HTML marker for route stops
+// Stop custom HTML marker
 function createStopMarkerIcon(color: string) {
   return L.divIcon({
     className: "custom-stop-marker-wrapper",
     html: `
       <div class="flex items-center justify-center w-4 h-4">
         <div class="w-3 h-3 rounded-full bg-slate-950 border-2 border-white/60 flex items-center justify-center shadow-md">
-          <div class="w-1.5 h-1.5 rounded-full" style="background-color: ${color}"></div>
+          <div class="w-1.5 h-1.5 rounded-full animate-pulse-glow" style="background-color: ${color}"></div>
         </div>
       </div>
     `,
@@ -76,9 +76,8 @@ function createStopMarkerIcon(color: string) {
 }
 
 export default function LiveMap() {
-  const { buses, routes, selectedBusId, setSelectedBusId } = useBusStore()
+  const { buses, routes, selectedBusId, setSelectedBusId, heatmapEnabled } = useBusStore()
 
-  // Center point: Hyderabad center
   const centerLat = 17.4192
   const centerLng = 78.4350
 
@@ -87,7 +86,7 @@ export default function LiveMap() {
   return (
     <div className="w-full h-full relative z-0">
       
-      {/* Map Control Stats HUD */}
+      {/* HUD Info Badge */}
       <div className="absolute top-4 right-4 z-[999] glass-panel p-3 rounded-xl flex items-center gap-4 text-xs font-semibold tracking-wide border border-white/10 shadow-lg">
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-[#00f0ff] animate-pulse"></span>
@@ -109,13 +108,51 @@ export default function LiveMap() {
         className="w-full h-full"
         zoomControl={false}
       >
-        {/* Custom dark map styling tiles */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
         <MapController selectedBus={selectedBus} />
+
+        {/* Smart Route Traffic Hotspot Heatmaps */}
+        {heatmapEnabled && (
+          <>
+            {/* Hitech delay zone: DLF stop */}
+            <Circle
+              center={[17.4430, 78.3570]}
+              radius={700}
+              pathOptions={{
+                fillColor: "#ef4444",
+                fillOpacity: 0.35,
+                color: "#ef4444",
+                weight: 1,
+              }}
+            />
+            {/* Charminar delay zone: Ameerpet Stop */}
+            <Circle
+              center={[17.4374, 78.4482]}
+              radius={800}
+              pathOptions={{
+                fillColor: "#f59e0b",
+                fillOpacity: 0.35,
+                color: "#f59e0b",
+                weight: 1,
+              }}
+            />
+            {/* ORR delay zone: Kukatpally Junction */}
+            <Circle
+              center={[17.4840, 78.3980]}
+              radius={900}
+              pathOptions={{
+                fillColor: "#ef4444",
+                fillOpacity: 0.25,
+                color: "#ef4444",
+                weight: 1,
+              }}
+            />
+          </>
+        )}
 
         {/* Draw Route Paths */}
         {routes.map((route) => (
@@ -132,7 +169,7 @@ export default function LiveMap() {
           />
         ))}
 
-        {/* Render Route Stops */}
+        {/* Route Stops */}
         {routes.map((route) =>
           route.stops.map((stop, idx) => (
             <Marker
@@ -150,7 +187,7 @@ export default function LiveMap() {
           ))
         )}
 
-        {/* Render Active Buses */}
+        {/* Moving Active Buses */}
         {buses.map((bus) => {
           const route = routes.find((r) => r.id === bus.routeId)
           const color = route ? route.color : "#00f0ff"
