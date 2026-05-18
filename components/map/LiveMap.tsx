@@ -126,8 +126,19 @@ function IndiaViewReset({ onReset }: { onReset: () => void }) {
 }
 
 export default function LiveMap() {
-  const { buses, routes, campuses, selectedBusId, setSelectedBusId, heatmapEnabled } = useBusStore()
+  const { buses, routes, campuses, selectedBusId, setSelectedBusId, heatmapEnabled, fetchRealRoadPath } = useBusStore()
   const mapRef = useRef<L.Map | null>(null)
+
+  const [osrmFetched, setOsrmFetched] = useState(false)
+
+  useEffect(() => {
+    if (!osrmFetched && routes.length > 0) {
+      routes.forEach(route => {
+        fetchRealRoadPath(route.id)
+      })
+      setOsrmFetched(true)
+    }
+  }, [routes, osrmFetched, fetchRealRoadPath])
 
   // Zooming out default centers map at India's geographic center
   const indiaCenterLat = 20.5937

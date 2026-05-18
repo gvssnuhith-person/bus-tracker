@@ -156,9 +156,10 @@ interface BusState {
   updateCampus: (id: string, updated: Partial<Campus>) => void
   removeAttendanceLog: (id: string) => void
   updateAttendanceLog: (id: string, updated: Partial<StudentAttendance>) => void
+  fetchRealRoadPath: (routeId: string) => Promise<void>
 }
 
-export const useBusStore = create<BusState>((set) => ({
+export const useBusStore = create<BusState>((set, get) => ({
   // Authentication & Dynamic Session defaults
   loggedInUser: null, // Start logged out so landing page & login portal are visible!
   login: (email, role) => set({
@@ -678,4 +679,31 @@ export const useBusStore = create<BusState>((set) => ({
   updateAttendanceLog: (id, updated) => set((state) => ({
     attendanceLogs: state.attendanceLogs.map((l) => l.id === id ? { ...l, ...updated } : l)
   })),
+
+  // Phase 3: Dynamic Real-Road Routing Engine (OSRM)
+  fetchRealRoadPath: async (routeId: string) => {
+    const state = get()
+    const route = state.routes.find((r) => r.id === routeId)
+    if (!route || route.stops.length < 2) return
+
+    try {
+      // Create coordinates string: lon1,lat1;lon2,lat2;...
+      const coordsString = route.stops.map(s => `${s.lng},${s.lat}`).join(';')
+      
+      const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson`)
+      const data = await response.json()
+
+      if (data.code === 'Ok' && data.routes && data.routes[0]) {
+        const geojsonPath = data.routes[0].geometry.coordinates // [lng, lat][]
+        const newPath = geojsonPath.map((coord: number[]) => [coord[1], coord[0]] as [number, number]) // convert to [lat, lng]
+        
+        set((state) => ({
+          routes: state.routes.map(r => r.id === routeId ? { ...r, path: newPath } : r)
+        }))
+        console.log(`[OSRM] Successfully fetched real road routing for ${route.name}`)
+      }
+    } catch (error) {
+      console.error(`[OSRM] Failed to fetch route for ${routeId}`, error)
+    }
+  },
 }))
