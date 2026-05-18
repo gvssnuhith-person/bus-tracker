@@ -68,6 +68,8 @@ export interface Campus {
   phone: string
   transportHead: string
   logo: string
+  lat: number
+  lng: number
 }
 
 export interface NotificationLog {
@@ -192,6 +194,8 @@ export const useBusStore = create<BusState>((set) => ({
       phone: "+91 40 2300 1234",
       transportHead: "Director Ramesh Rao",
       logo: "🏫",
+      lat: 17.4430,
+      lng: 78.3570,
     },
     {
       id: "campus-city",
@@ -200,6 +204,28 @@ export const useBusStore = create<BusState>((set) => ({
       phone: "+91 40 2450 5678",
       transportHead: "Asst. Suptd. Yadav",
       logo: "🕌",
+      lat: 17.3616,
+      lng: 78.4747,
+    },
+    {
+      id: "campus-delhi",
+      name: "Delhi North Campus Depot",
+      address: "Chhatra Marg, GTB Nagar, New Delhi",
+      phone: "+91 11 2766 7722",
+      transportHead: "Superintendent Verma",
+      logo: "🏛️",
+      lat: 28.6921,
+      lng: 77.2141,
+    },
+    {
+      id: "campus-bangalore",
+      name: "Bangalore Tech Depot",
+      address: "Electronic City Phase I, Bangalore",
+      phone: "+91 80 4110 9988",
+      transportHead: "Admin Chief Murthy",
+      logo: "🏢",
+      lat: 12.9716,
+      lng: 77.5946,
     },
   ],
   addCampus: (campus) => set((state) => ({ campuses: [...state.campuses, campus] })),

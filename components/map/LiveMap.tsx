@@ -1,29 +1,49 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { MapContainer, TileLayer, Polyline, Marker, Popup, Circle, useMap } from "react-leaflet"
-import { useBusStore, Bus } from "@/store/busStore"
+import { useBusStore, Bus, Campus } from "@/store/busStore"
 import L from "leaflet"
 
 // Sub-component to programmatically control panning and zoom behavior on select
-function MapController({ selectedBus }: { selectedBus: Bus | null }) {
+interface MapControllerProps {
+  selectedBus: Bus | null
+  selectedCampus: Campus | null
+}
+
+function MapController({ selectedBus, selectedCampus }: MapControllerProps) {
   const map = useMap()
-  const lastSelectedId = useRef<string | null>(null)
+  const lastSelectedBusId = useRef<string | null>(null)
+  const lastSelectedCampusId = useRef<string | null>(null)
 
   useEffect(() => {
     if (selectedBus) {
-      const isNewSelection = lastSelectedId.current !== selectedBus.busId
-      lastSelectedId.current = selectedBus.busId
+      const isNewSelection = lastSelectedBusId.current !== selectedBus.busId
+      lastSelectedBusId.current = selectedBus.busId
+      lastSelectedCampusId.current = null
 
       if (isNewSelection) {
-        // Zoom and center on selection
+        // Zoom and center on selected vehicle
         map.setView([selectedBus.lat, selectedBus.lng], 14, { animate: true, duration: 1 })
       } else {
-        // Follow movement
+        // Smooth follow
         map.panTo([selectedBus.lat, selectedBus.lng], { animate: true, duration: 0.8 })
       }
     }
   }, [selectedBus, map])
+
+  useEffect(() => {
+    if (selectedCampus) {
+      const isNewSelection = lastSelectedCampusId.current !== selectedCampus.id
+      lastSelectedCampusId.current = selectedCampus.id
+      lastSelectedBusId.current = null
+
+      if (isNewSelection) {
+        // Zoom and center on selected campus depot anywhere in India
+        map.setView([selectedCampus.lat, selectedCampus.lng], 13, { animate: true, duration: 1.2 })
+      }
+    }
+  }, [selectedCampus, map])
 
   return null
 }
@@ -59,7 +79,7 @@ function createBusMarkerIcon(bus: Bus, color: string, isSelected: boolean) {
   })
 }
 
-// Stop custom HTML marker
+// Custom HTML marker for route stops
 function createStopMarkerIcon(color: string) {
   return L.divIcon({
     className: "custom-stop-marker-wrapper",
@@ -75,17 +95,63 @@ function createStopMarkerIcon(color: string) {
   })
 }
 
-export default function LiveMap() {
-  const { buses, routes, selectedBusId, setSelectedBusId, heatmapEnabled } = useBusStore()
+// Custom HTML glowing marker for Campus Depots across India
+function createCampusMarkerIcon(logo: string) {
+  return L.divIcon({
+    className: "custom-campus-marker-wrapper",
+    html: `
+      <div class="relative flex items-center justify-center w-9 h-9 transition-all duration-300">
+        <!-- Glowing Amber Circle -->
+        <div class="absolute inset-0 rounded-xl bg-slate-950/95 border-2 border-amber-400/80 shadow-md shadow-amber-500/20 flex items-center justify-center text-base">
+          ${logo}
+        </div>
+        <div class="absolute -inset-0.5 rounded-xl border border-amber-400/20 animate-pulse pointer-events-none"></div>
+      </div>
+    `,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+  })
+}
 
-  const centerLat = 17.4192
-  const centerLng = 78.4350
+// Floating button to reset map view to entire map of India
+function IndiaViewReset({ onReset }: { onReset: () => void }) {
+  return (
+    <button
+      onClick={onReset}
+      className="absolute top-4 left-4 z-[999] px-3.5 py-2.5 rounded-xl glass-panel border border-white/10 hover:border-amber-400/40 text-[10px] font-black uppercase text-amber-300 tracking-wider shadow-lg flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
+    >
+      <span>🌐</span> India View
+    </button>
+  )
+}
+
+export default function LiveMap() {
+  const { buses, routes, campuses, selectedBusId, setSelectedBusId, heatmapEnabled } = useBusStore()
+  const mapRef = useRef<L.Map | null>(null)
+
+  // Zooming out default centers map at India's geographic center
+  const indiaCenterLat = 20.5937
+  const indiaCenterLng = 78.9629
 
   const selectedBus = buses.find((b) => b.busId === selectedBusId) || null
+
+  // Link selected campus (to pan map when a campus is registered or highlighted)
+  const [selectedCampus, setSelectedCampus] = useState<Campus | null>(null)
+
+  const handleIndiaReset = () => {
+    setSelectedBusId(null)
+    setSelectedCampus(null)
+    if (mapRef.current) {
+      mapRef.current.setView([indiaCenterLat, indiaCenterLng], 5, { animate: true, duration: 1.5 })
+    }
+  }
 
   return (
     <div className="w-full h-full relative z-0">
       
+      {/* Floating reset map button */}
+      <IndiaViewReset onReset={handleIndiaReset} />
+
       {/* HUD Info Badge */}
       <div className="absolute top-4 right-4 z-[999] glass-panel p-3 rounded-xl flex items-center gap-4 text-xs font-semibold tracking-wide border border-white/10 shadow-lg">
         <div className="flex items-center gap-1.5">
@@ -97,28 +163,29 @@ export default function LiveMap() {
           <span className="text-purple-300">Charminar</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
-          <span className="text-emerald-300">ORR Commuter</span>
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+          <span className="text-amber-400">Campus Depots</span>
         </div>
       </div>
 
       <MapContainer
-        center={[centerLat, centerLng]}
-        zoom={12}
+        center={[indiaCenterLat, indiaCenterLng]}
+        zoom={5}
         className="w-full h-full"
         zoomControl={false}
+        ref={mapRef}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <MapController selectedBus={selectedBus} />
+        <MapController selectedBus={selectedBus} selectedCampus={selectedCampus} />
 
         {/* Smart Route Traffic Hotspot Heatmaps */}
         {heatmapEnabled && (
           <>
-            {/* Hitech delay zone: DLF stop */}
+            {/* Gachibowli delay zone */}
             <Circle
               center={[17.4430, 78.3570]}
               radius={700}
@@ -129,7 +196,7 @@ export default function LiveMap() {
                 weight: 1,
               }}
             />
-            {/* Charminar delay zone: Ameerpet Stop */}
+            {/* Ameerpet delay zone */}
             <Circle
               center={[17.4374, 78.4482]}
               radius={800}
@@ -137,17 +204,6 @@ export default function LiveMap() {
                 fillColor: "#f59e0b",
                 fillOpacity: 0.35,
                 color: "#f59e0b",
-                weight: 1,
-              }}
-            />
-            {/* ORR delay zone: Kukatpally Junction */}
-            <Circle
-              center={[17.4840, 78.3980]}
-              radius={900}
-              pathOptions={{
-                fillColor: "#ef4444",
-                fillOpacity: 0.25,
-                color: "#ef4444",
                 weight: 1,
               }}
             />
@@ -186,6 +242,38 @@ export default function LiveMap() {
             </Marker>
           ))
         )}
+
+        {/* Registered Campus Depots Markers across India */}
+        {campuses.map((campus) => (
+          <Marker
+            key={campus.id}
+            position={[campus.lat, campus.lng]}
+            icon={createCampusMarkerIcon(campus.logo)}
+            eventHandlers={{
+              click: () => {
+                setSelectedCampus(campus)
+              },
+            }}
+          >
+            <Popup>
+              <div className="p-2 text-xs w-[190px]">
+                <div className="flex justify-between items-center font-bold pb-1 border-b border-slate-700">
+                  <span className="text-amber-400">{campus.name}</span>
+                  <span className="text-base">{campus.logo}</span>
+                </div>
+                <p className="text-[10px] text-slate-300 mt-1.5 font-medium">{campus.address}</p>
+                <p className="text-[9px] text-slate-500 mt-0.5">Manager: {campus.transportHead}</p>
+                <p className="text-[9px] text-slate-500 mt-0.5">Phone: {campus.phone}</p>
+                <button
+                  onClick={() => setSelectedCampus(campus)}
+                  className="mt-2 w-full py-1 text-[8px] font-black uppercase tracking-wider rounded bg-amber-500/20 border border-amber-400/30 text-amber-300 hover:bg-amber-500/30 active:scale-95 transition-all text-center block"
+                >
+                  🔍 Zoom In Depot
+                </button>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
 
         {/* Moving Active Buses */}
         {buses.map((bus) => {

@@ -20,6 +20,8 @@ export default function TransportHeadPanel() {
   const [cPhone, setCPhone] = useState("")
   const [cHead, setCHead] = useState("")
   const [cLogo, setCLogo] = useState("🏫")
+  const [cLat, setCLat] = useState("20.5937")
+  const [cLng, setCLng] = useState("78.9629")
 
   // PDF report mock generator states
   const [reportGenerated, setReportGenerated] = useState(false)
@@ -36,16 +38,20 @@ export default function TransportHeadPanel() {
       phone: cPhone.trim() || "+91 40 2300 0000",
       transportHead: cHead.trim() || "Asst. Suptd. Kumar",
       logo: cLogo,
+      lat: parseFloat(cLat) || 20.5937,
+      lng: parseFloat(cLng) || 78.9629,
     }
 
     addCampus(payload)
-    addNotification(`Transport Head: New Campus Depot '${payload.name}' added to registry.`, "success")
+    addNotification(`Transport Head: New Campus Depot '${payload.name}' deployed to coordinates [${payload.lat}, ${payload.lng}].`, "success")
 
     // Reset fields
     setCName("")
     setCAddress("")
     setCPhone("")
     setCHead("")
+    setCLat("20.5937")
+    setCLng("78.9629")
   }
 
   const triggerMockDownload = () => {
@@ -81,7 +87,7 @@ export default function TransportHeadPanel() {
                   <h4 className="text-xs font-black text-slate-200 truncate">{c.name}</h4>
                   <p className="text-[8px] text-slate-500 font-semibold truncate mt-1">📍 {c.address}</p>
                   <p className="text-[8px] text-slate-500 font-semibold mt-0.5">📞 {c.phone}</p>
-                  <p className="text-[8px] text-cyan-400/80 font-bold mt-1">Director: {c.transportHead}</p>
+                  <p className="text-[8px] text-cyan-400/80 font-bold mt-1">Coord: [{c.lat.toFixed(3)}, {c.lng.toFixed(3)}]</p>
                 </div>
                 <button
                   onClick={() => {
@@ -127,8 +133,8 @@ export default function TransportHeadPanel() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="space-y-1 md:col-span-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
                 <label className="text-[8px] font-bold text-slate-400 uppercase">Address Location</label>
                 <input
                   type="text"
@@ -146,6 +152,30 @@ export default function TransportHeadPanel() {
                   value={cPhone}
                   onChange={(e) => setCPhone(e.target.value)}
                   className="w-full glass-input text-[10px] px-3 py-2 rounded-lg font-bold"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[8px] font-bold text-slate-400 uppercase">Deploy Latitude</label>
+                <input
+                  type="text"
+                  placeholder="E.g. 28.692"
+                  value={cLat}
+                  onChange={(e) => setCLat(e.target.value)}
+                  className="w-full glass-input text-[10px] px-3 py-2 rounded-lg font-bold"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[8px] font-bold text-slate-400 uppercase">Deploy Longitude</label>
+                <input
+                  type="text"
+                  placeholder="E.g. 77.214"
+                  value={cLng}
+                  onChange={(e) => setCLng(e.target.value)}
+                  className="w-full glass-input text-[10px] px-3 py-2 rounded-lg font-bold"
+                  required
                 />
               </div>
             </div>
