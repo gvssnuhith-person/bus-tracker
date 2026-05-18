@@ -1,12 +1,13 @@
 import { create } from "zustand"
 
-export type UserRole = "admin" | "student" | "parent" | "driver"
+export type UserRole = "admin" | "student" | "parent" | "driver" | "manager" | "security"
 
 export interface DriverInfo {
   name: string
   avatar: string
   rating: number
   phone: string
+  licenseNumber?: string
 }
 
 export interface StudentAttendance {
@@ -29,12 +30,20 @@ export interface Bus {
   speed: number
   capacity: number
   passengers: number
-  fuelLevel: number
-  status: "on-time" | "heavy-traffic" | "delayed"
+  fuelLevel: number // EV Battery %
+  status: "on-time" | "heavy-traffic" | "delayed" | "maintenance" | "offline"
   nextStop: string
   etaMinutes: number
   driver: DriverInfo
   currentPathIndex: number
+  
+  // High-fidelity ecosystem metrics
+  evBatteryCharge: number
+  mileage: number
+  tirePressure: string
+  engineAlerts: string
+  cctvActive: boolean
+  weatherWarning: string
 }
 
 export interface RouteStop {
@@ -49,6 +58,16 @@ export interface Route {
   color: string
   stops: RouteStop[]
   path: [number, number][]
+  timings?: string
+}
+
+export interface Campus {
+  id: string
+  name: string
+  address: string
+  phone: string
+  transportHead: string
+  logo: string
 }
 
 export interface NotificationLog {
@@ -59,10 +78,27 @@ export interface NotificationLog {
   busId?: string
 }
 
+export interface Announcement {
+  id: string
+  message: string
+  type: "holiday" | "route" | "emergency"
+  timestamp: string
+}
+
 interface BusState {
-  // Authentication & Roles
+  // Authentication & Dynamic Session
+  loggedInUser: { email: string; role: UserRole; name: string; avatar?: string } | null
+  login: (email: string, role: UserRole) => void
+  logout: () => void
   activeRole: UserRole
   setActiveRole: (role: UserRole) => void
+
+  // Core Campus details
+  campusName: string
+  setCampusName: (name: string) => void
+  campuses: Campus[]
+  addCampus: (campus: Campus) => void
+  removeCampus: (id: string) => void
 
   // Telemetry Lists
   buses: Bus[]
@@ -70,11 +106,15 @@ interface BusState {
   selectedBusId: string | null
   setSelectedBusId: (id: string | null) => void
 
-  // Filters
+  // Filters & Universal Smart Search
   searchQuery: string
   setSearchQuery: (query: string) => void
   selectedRouteFilter: string
   setSelectedRouteFilter: (routeId: string) => void
+
+  // Global Theme Mode
+  theme: "dark" | "light"
+  setTheme: (theme: "dark" | "light") => void
 
   // Real-Time Simulator Variables
   isSimulating: boolean
@@ -82,6 +122,10 @@ interface BusState {
   simSpeed: number
   setSimSpeed: (speed: number) => void
   updateBusPositions: (updater: (prev: Bus[]) => Bus[]) => void
+
+  // Announcement Engine
+  announcements: Announcement[]
+  addAnnouncement: (message: string, type: "holiday" | "route" | "emergency") => void
 
   // Notification Engine
   notifications: NotificationLog[]
@@ -101,8 +145,6 @@ interface BusState {
   toggleDriverStop: (stopName: string) => void
 
   // Admin CRUD Settings
-  campusName: string
-  setCampusName: (name: string) => void
   addBus: (bus: Bus) => void
   removeBus: (busId: string) => void
   addRoute: (route: Route) => void
@@ -110,41 +152,58 @@ interface BusState {
 }
 
 export const useBusStore = create<BusState>((set) => ({
-  // Dynamic Campus Settings
-  campusName: "CampusFlow AI",
-  setCampusName: (name) => set({ campusName: name }),
-  addBus: (bus) => set((state) => ({ buses: [...state.buses, bus] })),
-  removeBus: (busId) => set((state) => ({ buses: state.buses.filter((b) => b.busId !== busId) })),
-  addRoute: (route) => set((state) => ({ routes: [...state.routes, route] })),
-  removeRoute: (routeId) => set((state) => {
-    const remainingRoutes = state.routes.filter((r) => r.id !== routeId)
-    const firstRoute = remainingRoutes[0]
-    
-    // Automatically reassign buses on the deleted route to the first available remaining route
-    const updatedBuses = state.buses.map((bus) => {
-      if (bus.routeId === routeId && firstRoute) {
-        return {
-          ...bus,
-          routeId: firstRoute.id,
-          route: `${firstRoute.name} (Line ${firstRoute.name.charAt(0)})`,
-          lat: firstRoute.path[0][0],
-          lng: firstRoute.path[0][1],
-          currentPathIndex: 0,
-          nextStop: firstRoute.stops[0]?.name || "Terminal",
-        }
-      }
-      return bus
-    }).filter((bus) => bus.routeId !== routeId || firstRoute)
-
-    return {
-      routes: remainingRoutes,
-      buses: updatedBuses,
-    }
+  // Authentication & Dynamic Session defaults
+  loggedInUser: null, // Start logged out so landing page & login portal are visible!
+  login: (email, role) => set({
+    loggedInUser: {
+      email,
+      role,
+      name: role === "student" 
+        ? "Siddharth Sen" 
+        : role === "parent" 
+        ? "Aditya's Parent" 
+        : role === "driver" 
+        ? "Ramesh Kumar" 
+        : role === "manager" 
+        ? "Director Rao" 
+        : role === "security" 
+        ? "Officer Singh" 
+        : "System Admin",
+      avatar: "👨‍💻",
+    },
+    activeRole: role,
   }),
-
-  // Authentication & Default Roles
+  logout: () => set({ loggedInUser: null, activeRole: "admin" }),
   activeRole: "admin",
   setActiveRole: (role) => set({ activeRole: role }),
+
+  // Global Theme
+  theme: "dark",
+  setTheme: (theme) => set({ theme }),
+
+  // Dynamic Campus Settings
+  campusName: "Vantage Tech Campus",
+  setCampusName: (name) => set({ campusName: name }),
+  campuses: [
+    {
+      id: "campus-main",
+      name: "Vantage Tech Campus",
+      address: "DLF Road, Gachibowli, Hyderabad, TS",
+      phone: "+91 40 2300 1234",
+      transportHead: "Director Ramesh Rao",
+      logo: "🏫",
+    },
+    {
+      id: "campus-city",
+      name: "Charminar Heritage Depot",
+      address: "Pathergatti Road, Charminar, Hyderabad",
+      phone: "+91 40 2450 5678",
+      transportHead: "Asst. Suptd. Yadav",
+      logo: "🕌",
+    },
+  ],
+  addCampus: (campus) => set((state) => ({ campuses: [...state.campuses, campus] })),
+  removeCampus: (id) => set((state) => ({ campuses: state.campuses.filter((c) => c.id !== id) })),
 
   selectedBusId: "BUS-104",
   searchQuery: "",
@@ -167,6 +226,34 @@ export const useBusStore = create<BusState>((set) => ({
         ? state.driverCompletedStops.filter((s) => s !== stopName)
         : [...state.driverCompletedStops, stopName],
     })),
+
+  // Announcements Engine
+  announcements: [
+    {
+      id: "ann-1",
+      message: "Monsoon schedule active: Cruise speed limits enforced at 45km/h max.",
+      type: "route",
+      timestamp: "09:00 AM",
+    },
+    {
+      id: "ann-2",
+      message: "Security Alert Drill: Dispatch SOS beacons tested successfully.",
+      type: "emergency",
+      timestamp: "10:15 AM",
+    },
+  ],
+  addAnnouncement: (message, type) =>
+    set((state) => {
+      const now = new Date()
+      const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      const newAnn: Announcement = {
+        id: `ann-${Date.now()}`,
+        message,
+        type,
+        timestamp: timeStr,
+      }
+      return { announcements: [newAnn, ...state.announcements].slice(0, 50) }
+    }),
 
   // Demo Students Attendance NFC/RFID Log
   attendanceLogs: [
@@ -201,7 +288,7 @@ export const useBusStore = create<BusState>((set) => ({
       return { attendanceLogs: [newLog, ...state.attendanceLogs].slice(0, 50) }
     }),
 
-  // Demo Buses Setup (5 buses for massive hacker/presentation visual impact)
+  // Dynamic EV Buses Setup
   buses: [
     {
       busId: "BUS-104",
@@ -217,8 +304,14 @@ export const useBusStore = create<BusState>((set) => ({
       status: "on-time",
       nextStop: "Gachibowli DLF",
       etaMinutes: 2,
-      driver: { name: "Ramesh Kumar", avatar: "👨‍✈️", rating: 4.8, phone: "+91 98480 22338" },
+      driver: { name: "Ramesh Kumar", avatar: "👨‍✈️", rating: 4.8, phone: "+91 98480 22338", licenseNumber: "DL-H104X20" },
       currentPathIndex: 0,
+      evBatteryCharge: 82,
+      mileage: 6.8,
+      tirePressure: "Nominal (34 PSI)",
+      engineAlerts: "No active faults",
+      cctvActive: true,
+      weatherWarning: "Wet road warning (Light Rain)",
     },
     {
       busId: "BUS-202",
@@ -234,8 +327,14 @@ export const useBusStore = create<BusState>((set) => ({
       status: "heavy-traffic",
       nextStop: "Charminar Palace",
       etaMinutes: 4,
-      driver: { name: "Suresh Yadav", avatar: "👨‍✈️", rating: 4.6, phone: "+91 91770 44551" },
+      driver: { name: "Suresh Yadav", avatar: "👨‍✈️", rating: 4.6, phone: "+91 91770 44551", licenseNumber: "DL-C202Y18" },
       currentPathIndex: 0,
+      evBatteryCharge: 94,
+      mileage: 5.2,
+      tirePressure: "Nominal (33 PSI)",
+      engineAlerts: "Check coolant levels",
+      cctvActive: true,
+      weatherWarning: "Nominal en-route",
     },
     {
       busId: "BUS-500",
@@ -251,8 +350,14 @@ export const useBusStore = create<BusState>((set) => ({
       status: "on-time",
       nextStop: "Gachibowli Circle",
       etaMinutes: 5,
-      driver: { name: "Baldev Singh", avatar: "👨‍✈️", rating: 4.9, phone: "+91 99882 11002" },
+      driver: { name: "Baldev Singh", avatar: "👨‍✈️", rating: 4.9, phone: "+91 99882 11002", licenseNumber: "DL-O500Z15" },
       currentPathIndex: 0,
+      evBatteryCharge: 68,
+      mileage: 8.4,
+      tirePressure: "Low pressure left rear (29 PSI)",
+      engineAlerts: "No active faults",
+      cctvActive: true,
+      weatherWarning: "Nominal en-route",
     },
     {
       busId: "BUS-112",
@@ -268,34 +373,24 @@ export const useBusStore = create<BusState>((set) => ({
       status: "on-time",
       nextStop: "Jubilee Hills Checkpost",
       etaMinutes: 8,
-      driver: { name: "M. A. Rahman", avatar: "👨‍✈️", rating: 4.7, phone: "+91 94405 88992" },
+      driver: { name: "M. A. Rahman", avatar: "👨‍✈️", rating: 4.7, phone: "+91 94405 88992", licenseNumber: "DL-H112A22" },
       currentPathIndex: 12,
-    },
-    {
-      busId: "BUS-305",
-      routeId: "route-charminar",
-      route: "Charminar Heritage (Line C)",
-      lat: 17.3820,
-      lng: 78.4520,
-      heading: 0,
-      speed: 0,
-      capacity: 55,
-      passengers: 41,
-      fuelLevel: 15,
-      status: "delayed",
-      nextStop: "Lakdikapul",
-      etaMinutes: 12,
-      driver: { name: "Koteswar Rao", avatar: "👨‍✈️", rating: 4.5, phone: "+91 96112 33445" },
-      currentPathIndex: 5,
+      evBatteryCharge: 42,
+      mileage: 7.1,
+      tirePressure: "Nominal (35 PSI)",
+      engineAlerts: "No active faults",
+      cctvActive: true,
+      weatherWarning: "Wet road warning (Light Rain)",
     },
   ],
 
-  // Hyderabad landmark Routes & complete smooth Snap Road paths
+  // landmark Routes
   routes: [
     {
       id: "route-hitech",
       name: "Hitech City Express",
       color: "#00f0ff",
+      timings: "08:00 AM - 06:30 PM",
       stops: [
         { name: "Gachibowli DLF", lat: 17.4430, lng: 78.3570 },
         { name: "Hitech City Hub", lat: 17.4483, lng: 78.3741 },
@@ -321,6 +416,7 @@ export const useBusStore = create<BusState>((set) => ({
       id: "route-charminar",
       name: "Charminar Heritage Line",
       color: "#bd34fe",
+      timings: "08:30 AM - 07:00 PM",
       stops: [
         { name: "Charminar Palace", lat: 17.3616, lng: 78.4747 },
         { name: "Koti Center", lat: 17.3820, lng: 78.4850 },
@@ -339,28 +435,6 @@ export const useBusStore = create<BusState>((set) => ({
         [17.4150, 78.4550],
         [17.4280, 78.4510],
         [17.4374, 78.4482],
-      ],
-    },
-    {
-      id: "route-orr",
-      name: "Outer Ring Commuter",
-      color: "#10b981",
-      stops: [
-        { name: "Gachibowli Circle", lat: 17.4241, lng: 78.3430 },
-        { name: "Miyapur Metro", lat: 17.4968, lng: 78.3580 },
-        { name: "Kukatpally Junction", lat: 17.4840, lng: 78.3980 },
-        { name: "Secunderabad Metro", lat: 17.4338, lng: 78.5016 },
-      ],
-      path: [
-        [17.4241, 78.3430],
-        [17.4520, 78.3410],
-        [17.4750, 78.3450],
-        [17.4968, 78.3580],
-        [17.4910, 78.3750],
-        [17.4840, 78.3980],
-        [17.4620, 78.4350],
-        [17.4420, 78.4720],
-        [17.4338, 78.5016],
       ],
     },
   ],
@@ -399,4 +473,33 @@ export const useBusStore = create<BusState>((set) => ({
     }),
 
   clearNotifications: () => set({ notifications: [] }),
+
+  addBus: (bus) => set((state) => ({ buses: [...state.buses, bus] })),
+  removeBus: (busId) => set((state) => ({ buses: state.buses.filter((b) => b.busId !== busId) })),
+  addRoute: (route) => set((state) => ({ routes: [...state.routes, route] })),
+  removeRoute: (routeId) => set((state) => {
+    const remainingRoutes = state.routes.filter((r) => r.id !== routeId)
+    const firstRoute = remainingRoutes[0]
+    
+    // Automatically reassign buses
+    const updatedBuses = state.buses.map((bus) => {
+      if (bus.routeId === routeId && firstRoute) {
+        return {
+          ...bus,
+          routeId: firstRoute.id,
+          route: `${firstRoute.name} (Line ${firstRoute.name.charAt(0)})`,
+          lat: firstRoute.path[0][0],
+          lng: firstRoute.path[0][1],
+          currentPathIndex: 0,
+          nextStop: firstRoute.stops[0]?.name || "Terminal",
+        }
+      }
+      return bus
+    }).filter((bus) => bus.routeId !== routeId || firstRoute)
+
+    return {
+      routes: remainingRoutes,
+      buses: updatedBuses,
+    }
+  }),
 }))

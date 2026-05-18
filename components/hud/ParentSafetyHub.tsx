@@ -22,71 +22,100 @@ export default function ParentSafetyHub() {
         activeBus.busId
       )
     }
+  }
 
-    // Play vocal notice
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      const utterance = new SpeechSynthesisUtterance(`Parent Notification: Safety Alert triggered on ${activeBus.busId}`)
-      window.speechSynthesis.speak(utterance)
-    }
+  const triggerCallDriver = () => {
+    alert(`[Simulating Outbound Dial] Connecting call to Ramesh Kumar (${activeBus.driver.phone}) via campus secure VoIP line...`)
   }
 
   return (
-    <div className="w-full h-full glass-panel rounded-2xl p-4 border border-white/5 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto no-scrollbar select-none">
+    <div className="w-full h-full glass-panel rounded-2xl p-4 border border-white/5 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-y-auto no-scrollbar select-none min-h-0">
       
-      {/* COLUMN 1: Safety Alerts Checklist & Simulator */}
-      <div className="flex flex-col gap-4 border-r border-white/5 pr-2 justify-between">
-        <div>
-          <h2 className="text-xs font-bold text-slate-500 tracking-widest uppercase">Parent Security Center</h2>
-          <h3 className="text-sm font-black text-white mt-0.5">VEHICLE SAFETY METRICS</h3>
+      {/* COLUMN 1: Child Live Tracking & Metrics (7 columns) */}
+      <div className="lg:col-span-7 flex flex-col gap-4 pr-0 lg:pr-3 border-r-0 lg:border-r border-white/5 justify-between">
+        
+        <div className="flex justify-between items-center pb-2 border-b border-white/5 shrink-0">
+          <div>
+            <h2 className="text-[10px] font-black text-slate-500 tracking-widest uppercase">Parent Security Center</h2>
+            <h3 className="text-sm font-black text-white mt-0.5">CHILD TRACKING FEED</h3>
+          </div>
+          <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[9px] font-black">
+            CHILD BOARDED
+          </span>
         </div>
 
-        {/* Safety KPI Checklist */}
-        <div className="space-y-3">
-          {/* Pick up check */}
-          <div className="glass-panel p-3 rounded-xl border border-white/5 flex items-center justify-between">
+        {/* 1. Child Tracking Tile */}
+        <div className="glass-panel p-4 rounded-xl border border-cyan-500/20 bg-slate-950/40 space-y-3 shrink-0">
+          <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
-              <span className="text-emerald-400 text-lg">🛡️</span>
+              <span className="text-2xl">👦</span>
               <div>
-                <h4 className="text-xs font-bold text-slate-200">Boarding Status</h4>
-                <p className="text-[9px] text-slate-500 mt-0.5">NFC/RFID Checked-in</p>
+                <h4 className="text-xs font-black text-slate-200">Aditya Verma (IIT2023042)</h4>
+                <p className="text-[8px] text-slate-500 font-bold mt-1">Bus Route: Hitech City Express</p>
               </div>
             </div>
-            <span className="text-[9px] font-black text-emerald-400 uppercase bg-emerald-500/10 px-2 py-0.5 rounded-lg">
-              CONFIRMED
-            </span>
+            <div className="text-right">
+              <span className="text-[8px] font-bold text-slate-500 uppercase block">Boarded Stop</span>
+              <span className="text-xs font-extrabold text-cyan-400 block mt-0.5">Gachibowli DLF</span>
+            </div>
           </div>
 
-          {/* Speed limit check */}
-          <div className="glass-panel p-3 rounded-xl border border-white/5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-cyan-400 text-lg">⚡</span>
-              <div>
-                <h4 className="text-xs font-bold text-slate-200">Speed Control</h4>
-                <p className="text-[9px] text-slate-500 mt-0.5">Safe operational limits</p>
-              </div>
+          <div className="grid grid-cols-3 gap-2.5 pt-2 border-t border-white/3 text-[9px] font-bold text-slate-400">
+            <div>
+              <span className="text-slate-500 block uppercase">Boarding Status</span>
+              <span className="text-emerald-400 block mt-0.5">Boarded (11:15 AM)</span>
             </div>
-            <span className="text-[9px] font-black text-cyan-400 uppercase bg-cyan-500/10 px-2 py-0.5 rounded-lg">
-              SAFE (&lt;55 km/h)
-            </span>
-          </div>
-
-          {/* Route path check */}
-          <div className="glass-panel p-3 rounded-xl border border-white/5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-purple-400 text-lg">🗺️</span>
-              <div>
-                <h4 className="text-xs font-bold text-slate-200">Route Deviation</h4>
-                <p className="text-[9px] text-slate-500 mt-0.5">GPS Snapping coordinates</p>
-              </div>
+            <div>
+              <span className="text-slate-500 block uppercase">Shuttle ETA</span>
+              <span className="text-cyan-400 block mt-0.5 font-mono">{activeBus.etaMinutes} mins remaining</span>
             </div>
-            <span className="text-[9px] font-black text-purple-400 uppercase bg-purple-500/10 px-2 py-0.5 rounded-lg">
-              EN ROUTE
-            </span>
+            <div>
+              <span className="text-slate-500 block uppercase">Vehicle Speed</span>
+              <span className="text-slate-200 block mt-0.5 font-mono">{activeBus.speed} km/h</span>
+            </div>
           </div>
         </div>
 
-        {/* Incident Trigger Simulator widget */}
-        <div className="glass-panel p-3 rounded-xl border border-white/5 bg-slate-950/20">
+        {/* 2. Direct Driver Contact Panel */}
+        <div className="glass-panel p-3.5 rounded-xl border border-white/5 bg-slate-900/10 shrink-0 space-y-3">
+          <span className="text-[9px] font-black text-purple-400 tracking-widest block uppercase">Assigned Driver Contact</span>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-slate-950 border border-white/5 flex items-center justify-center text-lg">
+                👨‍✈️
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-slate-200">{activeBus.driver.name}</h4>
+                <p className="text-[9px] text-slate-500 font-semibold mt-0.5">{activeBus.driver.phone}</p>
+              </div>
+            </div>
+            <button
+              onClick={triggerCallDriver}
+              className="px-3.5 py-2 rounded-xl bg-purple-500/20 border border-purple-400/30 text-purple-300 text-[9px] font-black uppercase hover:bg-purple-500/30 active:scale-95 transition-all flex items-center gap-1.5"
+            >
+              📞 Direct Call
+            </button>
+          </div>
+        </div>
+
+        {/* 3. Safety KPI Checklist */}
+        <div className="space-y-2 shrink-0">
+          <span className="text-[9px] font-black text-slate-500 tracking-wider block uppercase">Vehicle Safety Metrics</span>
+          
+          <div className="grid grid-cols-2 gap-2 text-[9px] font-bold">
+            <div className="p-2.5 rounded-xl border border-white/5 bg-slate-900/20 flex items-center justify-between">
+              <span className="text-slate-400">Speed Buffer</span>
+              <span className="text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded">SAFE (&lt;55 km/h)</span>
+            </div>
+            <div className="p-2.5 rounded-xl border border-white/5 bg-slate-900/20 flex items-center justify-between">
+              <span className="text-slate-400">Route Deviations</span>
+              <span className="text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded">EN ROUTE</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Incident Trigger Simulator widget */}
+        <div className="glass-panel p-3 rounded-xl border border-white/5 bg-slate-950/20 shrink-0">
           <span className="text-[9px] font-bold text-slate-500 tracking-wider block mb-2 uppercase">
             Simulate safety warning notification
           </span>
@@ -106,27 +135,23 @@ export default function ParentSafetyHub() {
           </div>
         </div>
 
-        <p className="text-[10px] text-slate-500 text-center font-bold">
-          Emergency broadcasts flash-overlay on parent view screen immediately.
-        </p>
       </div>
 
-      {/* COLUMN 2: Student Smart Boarding Check-in logs Timeline */}
-      <div className="flex flex-col gap-4 justify-between h-full min-h-0">
+      {/* COLUMN 2: Attendance Logs (5 columns) */}
+      <div className="lg:col-span-5 flex flex-col gap-4 justify-between h-full min-h-0">
         <div>
-          <h4 className="text-[10px] font-extrabold tracking-widest text-slate-500 uppercase">Student Boarding Attendance register</h4>
+          <h4 className="text-[10px] font-extrabold tracking-widest text-slate-500 uppercase">Daily travel logs</h4>
           <h3 className="text-xs font-black text-cyan-400 mt-0.5">NFC / RFID SCAN LOGS</h3>
         </div>
 
         {/* Boarding Logs List timeline */}
-        <div className="flex-1 min-h-[200px] overflow-y-auto pr-1 space-y-3">
+        <div className="flex-1 min-h-[220px] overflow-y-auto pr-1 space-y-2.5 no-scrollbar">
           {attendanceLogs.map((log) => (
             <div
               key={log.id}
-              className="p-3 rounded-xl border border-white/3 bg-white/2 flex justify-between items-center transition-all duration-300"
+              className="p-3 rounded-xl border border-white/3 bg-white/2 flex justify-between items-center transition-all"
             >
               <div className="flex items-center gap-3 min-w-0">
-                {/* Visual scanning icon */}
                 <div className="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-sm shrink-0">
                   {log.type === "RFID Tap" ? "💳" : log.type === "QR Scan" ? "📷" : "📱"}
                 </div>

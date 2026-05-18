@@ -79,6 +79,12 @@ export default function IntelligencePanel() {
         phone: "+91 99999 88888",
       },
       currentPathIndex: 0,
+      evBatteryCharge: 100,
+      mileage: 7.5,
+      tirePressure: "Nominal (34 PSI)",
+      engineAlerts: "No active faults",
+      cctvActive: true,
+      weatherWarning: "Nominal en-route",
     }
 
     addBus(busPayload)
@@ -180,21 +186,21 @@ export default function IntelligencePanel() {
                 </div>
               </div>
 
-              {/* Battery/Fuel HUD */}
+              {/* Battery/EV Charger HUD */}
               <div className="glass-panel p-3 rounded-xl border border-white/5 flex flex-col justify-between">
-                <span className="text-[9px] font-bold text-slate-500 tracking-wider">Battery/Fuel</span>
+                <span className="text-[9px] font-bold text-slate-500 tracking-wider">EV Battery</span>
                 <div className="flex items-baseline gap-1 mt-2">
                   <span 
                     className="text-xl font-black font-mono tracking-tight"
                     style={{ 
-                      color: selectedBus.fuelLevel > 50 
+                      color: selectedBus.evBatteryCharge > 50 
                         ? "#10b981" 
-                        : selectedBus.fuelLevel > 20 
+                        : selectedBus.evBatteryCharge > 20 
                         ? "#f59e0b" 
                         : "#ef4444" 
                     }}
                   >
-                    {Math.round(selectedBus.fuelLevel)}
+                    {Math.round(selectedBus.evBatteryCharge)}
                   </span>
                   <span className="text-[8px] font-extrabold text-slate-500">%</span>
                 </div>
@@ -202,10 +208,10 @@ export default function IntelligencePanel() {
                   <div 
                     className="h-full rounded-full transition-all duration-300"
                     style={{ 
-                      width: `${selectedBus.fuelLevel}%`,
-                      backgroundColor: selectedBus.fuelLevel > 50 
+                      width: `${selectedBus.evBatteryCharge}%`,
+                      backgroundColor: selectedBus.evBatteryCharge > 50 
                         ? "#10b981" 
-                        : selectedBus.fuelLevel > 20 
+                        : selectedBus.evBatteryCharge > 20 
                         ? "#f59e0b" 
                         : "#ef4444"
                     }}
@@ -237,6 +243,36 @@ export default function IntelligencePanel() {
                   <span className="text-[8px] font-extrabold text-slate-500">{Math.round(selectedBus.heading)}°</span>
                 </div>
                 <p className="text-[8px] font-bold text-slate-500 mt-2">Geo-direction bearing</p>
+              </div>
+            </div>
+
+            {/* EV Telematics Indicators */}
+            <div className="p-3 rounded-xl border border-white/5 glass-panel bg-slate-950/20 text-[10px] font-bold text-slate-300 space-y-2 shrink-0">
+              <span className="text-[9px] font-black text-cyan-400 uppercase block">EV Health Monitors</span>
+              <div className="flex justify-between border-b border-white/3 pb-1">
+                <span className="text-slate-500">Tire Pressure</span>
+                <span>{selectedBus.tirePressure}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/3 pb-1">
+                <span className="text-slate-500">Engine Diagnostics</span>
+                <span className={selectedBus.engineAlerts.includes("faults") ? "text-slate-200" : "text-amber-400"}>{selectedBus.engineAlerts}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Cabin CCTV Cameras</span>
+                <span className="text-emerald-400">📹 CCTV ACTIVE</span>
+              </div>
+            </div>
+
+            {/* Weather Guidelines speed advice */}
+            <div className="p-3 rounded-xl border border-white/5 glass-panel bg-slate-950/20 text-[10px] font-bold text-slate-300 space-y-1.5 shrink-0">
+              <span className="text-[9px] font-black text-amber-400 uppercase block">Climate Speed Advisories</span>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Weather snap</span>
+                <span>{selectedBus.weatherWarning}</span>
+              </div>
+              <div className="flex justify-between text-[8px] text-slate-500 font-semibold leading-relaxed">
+                <span>Speed reduction advice:</span>
+                <span>Enforce 45km/h speed limit</span>
               </div>
             </div>
 
